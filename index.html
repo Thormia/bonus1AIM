@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hoàng Lương Nhất Mộng - Lãnh Cung Phá Kén</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400;1,700&family=Noto+Serif:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #d4af37;
+            --dark-red: #8b0000;
+            --blood: #660000;
+            --bg-dark: #050505;
+            --bg-panel: #0d0d0d;
+            --text-main: #e2e8f0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Noto Serif', serif;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* Hiệu ứng nhiễu sóng (CRT Scanlines) */
+        .crt::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 100;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        h1, h2, h3, .title-font { font-family: 'Lora', serif; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: #333; }
+
+        .game-container {
+            border: 1px solid #222;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.9), inset 0 0 20px rgba(139, 0, 0, 0.15);
+            background: rgba(10, 10, 10, 0.98);
+        }
+
+        .stat-bar-bg { background-color: #1a202c; border-radius: 2px; overflow: hidden; position: relative;}
+        .hp-fill { background: linear-gradient(90deg, #742a2a, #fc8181); transition: width 0.4s ease; }
+        .san-fill { background: linear-gradient(90deg, #2a4365, #63b3ed); transition: width 0.4s ease; }
+
+        .choice-btn {
+            background: rgba(20, 20, 20, 0.8);
+            border: 1px solid #333;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .choice-btn:hover:not(:disabled) {
+            border-color: var(--gold);
+            background: rgba(40, 40, 40, 0.9);
+            padding-left: 1.5rem;
+            color: var(--gold);
+        }
+        .choice-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .choice-btn::before {
+            content: '►'; position: absolute; left: 0.5rem; opacity: 0; color: var(--gold); transition: opacity 0.2s; font-size: 0.8em; top: 50%; transform: translateY(-50%);
+        }
+        .choice-btn:hover:not(:disabled)::before { opacity: 1; }
+
+        /* Lựa chọn ảo giác */
+        .fake-choice {
+            color: #ef4444 !important; font-style: italic; text-decoration: line-through; border-color: #7f1d1d !important;
+        }
+
+        .cursor { display: inline-block; width: 6px; height: 1.1em; background-color: var(--gold); animation: blink 1s step-end infinite; vertical-align: bottom;}
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        /* Hiệu ứng trạng thái */
+        .glitch-text { animation: glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite; color: #ff003c; }
+        @keyframes glitch {
+            0% { transform: translate(0) }
+            20% { transform: translate(-2px, 2px) }
+            40% { transform: translate(-2px, -2px) }
+            60% { transform: translate(2px, 2px) }
+            80% { transform: translate(2px, -2px) }
+            100% { transform: translate(0) }
+        }
+
+        .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        .insanity-fx { filter: hue-rotate(90deg) contrast(1.2) brightness(0.8); }
+
+        .floating-text {
+            position: absolute; pointer-events: none; animation: floatUp 2s ease-out forwards;
+            font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,1); z-index: 60;
+        }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-60px) scale(1.1); }
+        }
+
+        .rules-paper {
+            background-color: #d1c4a5; color: #2b1d14;
+            background-image: linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px); background-size: 100% 28px;
+            box-shadow: inset 0 0 80px rgba(100, 50, 0, 0.6);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex items-center justify-center p-0 md:p-4 crt">
+
+    <div id="damage-overlay" class="fixed inset-0 pointer-events-none opacity-0 z-50 bg-[radial-gradient(circle,transparent_20%,rgba(139,0,0,0.7)_100%)] transition-opacity duration-200"></div>
+
+    <div id="game-wrapper" class="game-container w-full h-full md:max-w-4xl md:h-[95vh] md:rounded-xl flex flex-col relative overflow-hidden transition-all duration-500">
+        
+        <!-- START SCREEN -->
+        <div id="screen-start" class="absolute inset-0 z-40 bg-black flex flex-col items-center justify-center p-8 text-center transition-opacity duration-1000">
+            <h3 class="text-red-700 tracking-[0.4em] text-xs mb-4 title-font uppercase animate-pulse">Lỗi phân vùng ký ức</h3>
+            <h1 class="text-4xl md:text-6xl font-bold text-[var(--gold)] mb-6 title-font drop-shadow-[0_0_15px_rgba(212,175,55,0.3)] glitch-text">HOÀNG LƯƠNG NHẤT MỘNG</h1>
+            <p class="text-gray-400 italic mb-12 text-base max-w-lg leading-relaxed">
+                Đêm nay lạnh quá. Tiếng bước chân ngoài kia là người... hay mã độc?<br>Tìm ra chân tướng, hoặc trở thành phế liệu của hệ thống.
+            </p>
+            <button onclick="startGame()" class="px-10 py-3 border border-[var(--gold)] text-[var(--gold)] hover:bg-[var(--gold)] hover:text-black transition-all duration-300 font-bold tracking-[0.2em] title-font uppercase shadow-[0_0_10px_rgba(212,175,55,0.2)]">
+                Kết Nối Thần Kinh
+            </button>
+        </div>
+
+        <!-- GAME SCREEN -->
+        <div id="screen-game" class="hidden flex-col h-full opacity-0 transition-opacity duration-1000 relative">
+            
+            <!-- HEADER -->
+            <div class="bg-[var(--bg-panel)] border-b border-[#222] p-3 flex flex-col md:flex-row items-center justify-between shrink-0 z-20">
+                <div class="w-full md:w-2/3 grid grid-cols-2 gap-6 px-2">
+                    <div>
+                        <div class="flex justify-between text-[10px] text-gray-400 mb-1 font-bold tracking-wider">
+                            <span>SINH LỰC</span><span id="ui-hp-text" class="text-red-400">100</span>
+                        </div>
+                        <div class="stat-bar-bg h-1.5 w-full"><div id="ui-hp-bar" class="hp-fill h-full w-full"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] text-gray-400 mb-1 font-bold tracking-wider">
+                            <span>TỈNH TÁO</span><span id="ui-san-text" class="text-blue-400">100</span>
+                        </div>
+                        <div class="stat-bar-bg h-1.5 w-full"><div id="ui-san-bar" class="san-fill h-full w-full"></div></div>
+                    </div>
+                </div>
+                <div class="w-full md:w-1/3 flex items-center justify-between md:justify-end gap-4 mt-3 md:mt-0 px-2">
+                    <div class="text-right">
+                        <p class="text-[9px] text-gray-500 uppercase tracking-widest">Thời gian hiển thị</p>
+                        <p id="ui-time" class="text-[var(--gold)] font-bold title-font text-sm animate-pulse">Canh Hai</p>
+                    </div>
+                    <button onclick="toggleRules()" class="px-3 py-1.5 text-xs border border-red-900 text-red-500 hover:bg-red-900 hover:text-white transition-colors uppercase tracking-wider bg-black">
+                        Quy Tắc
+                    </button>
+                </div>
+            </div>
+
+            <!-- INVENTORY -->
+            <div class="bg-black border-b border-[#111] px-4 py-2 shrink-0 flex items-center gap-3 overflow-x-auto">
+                <span class="text-[10px] text-gray-600 uppercase tracking-wider shrink-0">Hành trang:</span>
+                <div id="ui-inventory" class="flex gap-2 text-sm"></div>
+            </div>
+
+            <!-- STORY AREA -->
+            <div id="story-container" class="flex-1 overflow-y-auto p-5 md:p-8 relative" onclick="skipTyping()">
+                <div id="story-log" class="space-y-5 text-sm md:text-base leading-relaxed text-gray-400"></div>
+                <div id="current-story" class="mt-5 text-sm md:text-base leading-relaxed text-[var(--text-main)] min-h-[120px]">
+                    <span id="typewriter-output"></span><span id="cursor" class="cursor"></span>
+                </div>
+            </div>
+
+            <!-- CHOICES -->
+            <div id="choices-container" class="bg-[var(--bg-panel)] border-t border-[#222] p-4 shrink-0 flex flex-col gap-2 min-h-[160px] justify-end shadow-[0_-10px_30px_rgba(0,0,0,0.8)] z-20">
+            </div>
+        </div>
+
+        <!-- RULES MODAL -->
+        <div id="rules-modal" class="hidden absolute inset-0 z-40 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+            <div class="rules-paper max-w-lg w-full p-6 md:p-8 rounded shadow-2xl relative">
+                <button onclick="toggleRules()" class="absolute top-2 right-4 text-3xl text-red-900 hover:text-red-600 font-bold">&times;</button>
+                <h2 class="text-xl font-bold text-center mb-4 border-b-2 border-red-900 pb-2 uppercase tracking-widest">Quy tắc sinh tồn Lãnh Cung</h2>
+                <div class="space-y-3 text-sm md:text-base leading-relaxed font-medium">
+                    <p class="italic text-gray-800 text-xs">Bệnh nhân vui lòng tuân thủ liệu trình ảo ảnh. Sự chống đối sẽ dẫn đến xóa bỏ dữ liệu não bộ.</p>
+                    <ul class="list-decimal pl-5 space-y-2 text-gray-900">
+                        <li>Không rời Tẩm cung khi nghe tiếng bước chân chẵn. Chỉ ra ngoài lúc bước chân lẻ.</li>
+                        <li>Nước giếng cạn ở Ngự hoa viên là Cam Lộ. Khát thì uống để duy trì lý trí.</li>
+                        <li>Tỳ nữ áo đỏ bưng chậu than là <span class="text-red-700 font-bold">quỷ sai</span>. Dùng nước dập tắt lửa ngay lập tức, không để hơi ấm lan ra.</li>
+                        <li>Gương đồng Thư phòng giam giữ tà linh. Tuyệt đối không nhìn vào trừ khi trăng lên đỉnh đầu.</li>
+                        <li>Đừng tin Hoàng Thượng. Ngài đã bị vấy bẩn.</li>
+                        <li>Nhắm mắt lại nếu thấy các dòng chữ kỳ lạ không thuộc về thế giới này.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- END SCREEN -->
+        <div id="screen-end" class="hidden absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-8 text-center">
+            <p class="text-gray-500 italic mb-2 title-font tracking-widest text-xs uppercase">Chấm dứt giả lập</p>
+            <h2 id="end-title" class="text-4xl md:text-6xl font-bold mb-6 title-font drop-shadow-lg uppercase tracking-widest">ENDING</h2>
+            <div id="end-desc" class="text-gray-300 mb-10 max-w-xl leading-relaxed text-sm md:text-base border-y border-[#333] py-6"></div>
+            <button onclick="location.reload()" class="px-8 py-3 border border-[#555] text-gray-300 hover:bg-white hover:text-black transition-colors title-font uppercase tracking-wider text-sm">
+                Khởi động lại Hệ Thống (Reboot)
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // -- STATE MANAGEMENT --
+        let gameState = {
+            hp: 100, san: 100,
+            inventory: [], flags: {},
+            turns: 0, canh: 2,
+            currentNode: null
+        };
+
+        const MAX_STAT = 100;
+        let typeInterval;
+        let isTyping = false;
+        let currentFullText = "";
+        let isDead = false;
+
+        // -- CORE ENGINE --
+        function startGame() {
+            document.getElementById('screen-start').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('screen-start').classList.add('hidden');
+                document.getElementById('screen-game').classList.remove('hidden');
+                setTimeout(() => document.getElementById('screen-game').style.opacity = '1', 50);
+                resetGame();
+                goToNode("intro");
+            }, 800);
+        }
+
+        function resetGame() {
+            gameState = { hp: 100, san: 100, inventory: [], flags: {}, turns: 0, canh: 2, currentNode: null };
+            isDead = false;
+            document.getElementById('story-log').innerHTML = '';
+            document.getElementById('game-wrapper').classList.remove('insanity-fx');
+            updateUI();
+        }
+
+        function updateUI() {
+            if(isDead) return;
+
+            // Stats
+            document.getElementById('ui-hp-bar').style.width = `${Math.max(0, gameState.hp)}%`;
+            document.getElementById('ui-hp-text').innerText = Math.max(0, gameState.hp);
+            document.getElementById('ui-san-bar').style.width = `${Math.max(0, gameState.san)}%`;
+            document.getElementById('ui-san-text').innerText = Math.max(0, gameState.san);
+
+            // Time mapping (1 canh = ~6 turns)
+            const timeLabels = ["Canh Một", "Canh Hai", "Canh Ba", "Canh Tư", "Canh Năm"];
+            document.getElementById('ui-time').innerText = timeLabels[Math.min(gameState.canh - 1, 4)];
+
+            // Inventory
+            const invEl = document.getElementById('ui-inventory');
+            if (gameState.inventory.length === 0) {
+                invEl.innerHTML = '<span class="italic text-gray-600 text-xs">Trống</span>';
+            } else {
+                invEl.innerHTML = gameState.inventory.map(i => `<span class="border border-gray-700 bg-[#111] text-gray-300 px-2 py-0.5 rounded text-xs whitespace-nowrap">${i}</span>`).join('');
+            }
+
+            // Sanity Effects
+            const wrapper = document.getElementById('game-wrapper');
+            if (gameState.san <= 40) {
+                wrapper.classList.add('insanity-fx');
+                if(Math.random() < 0.3) document.body.classList.add('shake');
+                setTimeout(() => document.body.classList.remove('shake'), 400);
+            } else {
+                wrapper.classList.remove('insanity-fx');
+            }
+        }
+
+        function changeStats(hpDelta, sanDelta, msg) {
+            if(isDead) return;
+            gameState.hp = Math.min(MAX_STAT, gameState.hp + hpDelta);
+            gameState.san = Math.min(MAX_STAT, gameState.san + sanDelta);
+            
+            if (hpDelta < 0 || sanDelta < 0) {
+                const overlay = document.getElementById('damage-overlay');
+                overlay.style.opacity = '1';
+                document.getElementById('game-wrapper').classList.add('shake');
+                setTimeout(() => {
+                    overlay.style.opacity = '0';
+                    document.getElementById('game-wrapper').classList.remove('shake');
+                }, 300);
+            }
+
+            if (msg) showFloatingText(msg, hpDelta < 0 || sanDelta < 0 ? 'red' : 'green');
+            
+            updateUI();
+            checkDeath();
+        }
+
+        function giveItem(item) {
+            if (!gameState.inventory.includes(item)) {
+                gameState.inventory.push(item);
+                showFloatingText(`+ Nhận: ${item}`, 'gold');
+                updateUI();
+            }
+        }
+        function hasItem(item) { return gameState.inventory.includes(item); }
+
+        function passTime() {
+            gameState.turns++;
+            if (gameState.turns % 5 === 0 && gameState.canh < 5) {
+                gameState.canh++;
+                showFloatingText("Thời gian trôi qua...", "white");
+            }
+            if (gameState.canh >= 5 && !gameState.flags.endgame_triggered) {
+                gameState.flags.endgame_triggered = true;
+            }
+            updateUI();
+            
+            // Random dynamic events based on JS conditions
+            if (gameState.turns === 7 && !gameState.flags.met_maid) {
+                gameState.flags.met_maid = true;
+                return "event_maid"; 
+            }
+            return null;
+        }
+
+        function goToNode(nodeId) {
+            if (isDead) return;
+
+            // Logic cướp quyền điều khiển nếu tới Canh 5
+            if (gameState.flags.endgame_triggered && !nodeId.startsWith("end_") && nodeId !== "event_canh_nam") {
+                nodeId = "event_canh_nam";
+            }
+
+            const node = story[nodeId];
+            if (!node) return;
+
+            gameState.currentNode = nodeId;
+            
+            // Xử lý logic khi vào Node
+            if (node.onEnter) {
+                const redirect = node.onEnter();
+                if (redirect) { // Cho phép onEnter trả về một node khác để chuyển hướng ngầm
+                    goToNode(redirect);
+                    return;
+                }
+            }
+
+            // Đẩy text cũ lên log
+            const outEl = document.getElementById('typewriter-output');
+            if (outEl.innerHTML.trim() !== "") {
+                document.getElementById('story-log').innerHTML += `<div class="mb-5 pb-5 border-b border-[#1a1a1a] opacity-60">${outEl.innerHTML}</div>`;
+            }
+            outEl.innerHTML = "";
+            
+            const choicesContainer = document.getElementById('choices-container');
+            choicesContainer.innerHTML = ''; // Clear choices
+            
+            // Bắt đầu gõ chữ (Typing Effect)
+            currentFullText = processText(node.text); // Áp dụng nhiễu loạn nếu Sanity thấp
+            isTyping = true;
+            let i = 0, tempHTML = "";
+            clearInterval(typeInterval);
+            
+            // Tốc độ gõ biến thiên dựa vào Sanity
+            let speed = gameState.san < 30 ? 10 : 25;
+
+            typeInterval = setInterval(() => {
+                if (i >= currentFullText.length) {
+                    finishTyping(node);
+                    return;
+                }
+                if (currentFullText[i] === '<') {
+                    let tag = "";
+                    while (currentFullText[i] !== '>' && i < currentFullText.length) { tag += currentFullText[i]; i++; }
+                    tag += '>'; tempHTML += tag;
+                } else {
+                    tempHTML += currentFullText[i]; i++;
+                }
+                outEl.innerHTML = tempHTML;
+                scrollToBottom();
+            }, speed);
+        }
+
+        function processText(text) {
+            // Hệ thống ảo giác: Tự động chèn mã lỗi vào văn bản nếu Tinh thần thấp
+            if (gameState.san < 40) {
+                const glitches = ["<span class='glitch-text text-xs'>[NULL]</span>", "<span class='glitch-text text-xs text-red-900'>*đau đớn*</span>", "<span class='opacity-20'>...giả dối...</span>"];
+                return text.replace(/ /g, () => Math.random() < 0.05 ? ` ${glitches[Math.floor(Math.random()*glitches.length)]} ` : " ");
+            }
+            return text;
+        }
+
+        function skipTyping() {
+            if (isTyping && gameState.currentNode) {
+                clearInterval(typeInterval);
+                document.getElementById('typewriter-output').innerHTML = currentFullText;
+                finishTyping(story[gameState.currentNode]);
+            }
+        }
+
+        function finishTyping(node) {
+            isTyping = false;
+            clearInterval(typeInterval);
+            scrollToBottom();
+            renderChoices(node.choices);
+        }
+
+        function renderChoices(choicesTemplate) {
+            const container = document.getElementById('choices-container');
+            container.innerHTML = '';
+            
+            if (!choicesTemplate) return;
+
+            let validChoices = [];
+
+            // Duyệt các lựa chọn và kiểm tra điều kiện Javascript phức tạp
+            choicesTemplate.forEach(c => {
+                if (c.condition && !c.condition()) return;
+                validChoices.push(c);
+            });
+
+            // Nếu Sanity cực thấp, chèn thêm lựa chọn giả mạo (Fake Choice)
+            if (gameState.san <= 25 && validChoices.length > 0 && Math.random() < 0.4) {
+                validChoices.push({
+                    text: "[HỆ THỐNG] Chấp nhận đầu hàng và định dạng lại não bộ.",
+                    isFake: true,
+                    next: "end_dien"
+                });
+            }
+
+            validChoices.forEach(c => {
+                const btn = document.createElement('button');
+                btn.className = `choice-btn w-full text-left p-3 text-sm md:text-base text-gray-300 ${c.isFake ? 'fake-choice' : ''}`;
+                btn.innerHTML = c.text;
+                
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    if (isTyping) return;
+                    if (c.action) c.action();
+                    document.getElementById('story-log').innerHTML += `<div class="mb-4 text-[var(--gold)] text-right italic">> ${c.text.replace(/<[^>]*>?/gm, '')}</div>`;
+                    if (c.next) goToNode(c.next);
+                };
+                container.appendChild(btn);
+            });
+            setTimeout(scrollToBottom, 50);
+        }
+
+        // Utils
+        function scrollToBottom() {
+            const c = document.getElementById('story-container');
+            c.scrollTop = c.scrollHeight;
+        }
+
+        function toggleRules() {
+            const m = document.getElementById('rules-modal');
+            m.classList.toggle('hidden');
+            setTimeout(() => m.style.opacity = m.classList.contains('hidden') ? '0' : '1', 10);
+        }
+
+        function showFloatingText(text, colorType) {
+            const el = document.createElement('div');
+            el.className = 'floating-text';
+            el.innerText = text;
+            const colors = { 'red': '#f87171', 'green': '#4ade80', 'gold': 'var(--gold)', 'white': '#fff' };
+            el.style.color = colors[colorType] || colors['white'];
+            el.style.left = `${40 + Math.random()*20}%`; el.style.top = `${40 + Math.random()*20}%`;
+            document.getElementById('game-wrapper').appendChild(el);
+            setTimeout(() => el.remove(), 2000);
+        }
+
+        function checkDeath() {
+            if (gameState.hp <= 0) { isDead = true; setTimeout(() => goToNode('end_dead'), 1000); }
+            else if (gameState.san <= 0) { isDead = true; setTimeout(() => goToNode('end_dien'), 1000); }
+        }
+
+        const story = {
+            "intro": {
+                text: "Tiếng 'bíp... bíp...' nhịp nhàng vang lên. Bạn mở mắt. Không phải trần bệnh viện vô trùng, mà là lớp màn tuyn đỏ cáu bẩn. Bạn đang mặc y phục cổ trang rách rưới.<br><br>Trong tay bạn nắm chặt một mẩu giấy ghi **Quy Tắc Sinh Tồn**. Ký ức trong đầu bạn hỗn loạn: Bạn là phi tần bị thất sủng... Không, bạn là Bệnh nhân 404 đang thử nghiệm VR.<br><br>Đêm nay là đêm Lãnh Cung thanh trừng.",
+                choices: [
+                    { text: "Nhìn xung quanh Tẩm Cung.", next: "tam_cung" },
+                    { text: "Đọc Quy Tắc (Ghi nhớ: Hệ thống có thể nói dối).", action: toggleRules, next: "tam_cung" }
+                ]
+            },
+
+            // --- KHU VỰC: TẨM CUNG ---
+            "tam_cung": {
+                text: "TẨM CUNG tối tăm. Gió lùa qua khe cửa sổ rách nát mang theo mùi máu tanh. Cửa chính dẫn ra Hành lang đóng chặt.",
+                onEnter: () => { const event = passTime(); if(event) return event; },
+                choices: [
+                    { text: "Kiểm tra gầm giường.", condition: () => !gameState.flags.checked_bed, next: "tc_giuong" },
+                    { text: "Mở cửa ra Hành Lang.", next: "hanh_lang" }
+                ]
+            },
+            "tc_giuong": {
+                text: "Dưới gầm giường đầy mạng nhện, bạn quờ quạng thấy một <span class='text-[var(--gold)] font-bold'>Trâm Bạc</span> sắc nhọn. Kèm theo dòng chữ khắc vội trên sàn: <i>'Quy tắc 3 là bẫy. Phải giữ lấy lửa.'</i>",
+                onEnter: () => { giveItem("Trâm Bạc"); gameState.flags.checked_bed = true; },
+                choices: [{ text: "Giấu Trâm Bạc vào áo, đứng lên.", next: "tam_cung" }]
+            },
+
+            // --- KHU VỰC: HÀNH LANG ---
+            "hanh_lang": {
+                text: "HÀNH LANG Lãnh Cung sâu hun hút. Đèn lồng mờ ảo. Phía Đông là Thư Phòng, Tây là Ngự Hoa Viên.<br><br>Bạn nghe rõ tiếng: <i>Cộp... cộp... cộp... cộp</i> (4 tiếng bước chân). Quy tắc 1 cấm bạn ra ngoài lúc này.",
+                onEnter: () => { const event = passTime(); if(event) return event; },
+                choices: [
+                    { text: "Sợ hãi, quay lại Tẩm Cung.", next: "tam_cung" },
+                    { text: "Tin Quy tắc 1: Đứng yên ngoài hành lang chờ bước chân lẻ.", next: "hl_cho_doi" },
+                    { text: "Phá Quy tắc 1: Phớt lờ âm thanh, chạy sang Ngự Hoa Viên.", next: "hoa_vien" },
+                    { text: "Phá Quy tắc 1: Phớt lờ âm thanh, lẻn vào Thư Phòng.", next: "thu_phong" }
+                ]
+            },
+            "hl_cho_doi": {
+                text: "Bạn đứng chôn chân. Bóng tối nghẹt thở. Càng chờ, tiếng 4 bước chân càng dồn dập. Cuối cùng bạn nhận ra... đó là nhịp tim dội lên màng nhĩ của chính mình!<br><br><span class='glitch-text text-xs'>Hệ thống đang thao túng thính giác của bạn.</span>",
+                onEnter: () => changeStats(0, -20, "Tâm trí suy nhược!"),
+                choices: [
+                    { text: "Hoảng loạn chạy bừa vào Ngự Hoa Viên.", next: "hoa_vien" },
+                    { text: "Cắn môi giữ tỉnh táo, vào Thư Phòng.", next: "thu_phong" }
+                ]
+            },
+
+            // --- EVENT: TỲ NỮ ÁO ĐỎ ---
+            "event_maid": {
+                text: "Nhiệt độ đột ngột hạ xuống dưới 0. Sương giá đóng băng trên tường. Một Tỳ nữ áo tang đỏ rực lơ lửng trôi tới, bưng một chậu than hồng rực rỡ.<br><br>Quy tắc 3 yêu cầu dập tắt lửa. Dòng chữ dưới gầm giường bảo giữ lửa.",
+                choices: [
+                    { text: "Làm theo Quy tắc 3: Dùng áo khoác đập tắt chậu than.", next: "maid_trap" },
+                    { text: "Phá Quy tắc 3: Đưa tay hơ lửa sưởi ấm.", next: "maid_safe" }
+                ]
+            },
+            "maid_trap": {
+                text: "Bạn dập tắt ngọn lửa. Ngay lập tức, mã độc lây lan. Tỳ nữ tan thành bóng đen, vươn móng vuốt cắm phập vào ngực bạn. Lửa là Firewall, bạn vừa tự tay tắt nó đi!",
+                onEnter: () => changeStats(-40, -30, "Lạnh giá tột độ!"),
+                choices: [{ text: "Ôm vết thương bỏ chạy vào Hành Lang.", next: "hanh_lang" }]
+            },
+            "maid_safe": {
+                text: "Bạn bất chấp quy tắc, áp tay vào hơi ấm. Chậu than tỏa ra một trường năng lượng dẩy lùi Tỳ nữ. Ả gào thét biến thành vô số đoạn mã xanh lá rơi lả tả. Cơ thể bạn được chữa lành.",
+                onEnter: () => { changeStats(20, 20, "Hồi phục!"); gameState.flags.know_fire = true; },
+                choices: [{ text: "Thở phào, tiếp tục di chuyển.", next: "hanh_lang" }]
+            },
+
+            // --- KHU VỰC: NGỰ HOA VIÊN ---
+            "hoa_vien": {
+                text: "NGỰ HOA VIÊN ngập trong sương. Ở giữa là Giếng cổ. Xung quanh nở rộ những đóa Hoa Bỉ Ngạn đỏ như máu.",
+                onEnter: () => { const event = passTime(); if(event) return event; },
+                choices: [
+                    { text: "Tiến đến Giếng nước.", next: "hv_gieng" },
+                    { text: "Hái Hoa Bỉ Ngạn.", condition: () => !hasItem("Hoa Bỉ Ngạn"), next: "hv_hoa" },
+                    { text: "Quay lại Hành Lang.", next: "hanh_lang" }
+                ]
+            },
+            "hv_gieng": {
+                text: "Nước trong giếng sóng sánh màu đỏ lờm lợm. Quy tắc 2 bảo đây là Cam Lộ giúp tĩnh tâm.",
+                choices: [
+                    { text: "Uống thử nước giếng (Quy tắc 2).", next: "gieng_trap" },
+                    { text: "Dùng Trâm Bạc chọc vào thành giếng.", condition: () => hasItem("Trâm Bạc") && !hasItem("Chu Sa"), next: "gieng_item" },
+                    { text: "Bỏ đi.", next: "hoa_vien" }
+                ]
+            },
+            "gieng_trap": {
+                text: "Bạn ngửa cổ uống. Mùi tanh ập đến. Cổ họng bốc cháy. Ảo giác xuất hiện: mặt trăng trên cao biến thành một con mắt máy móc khổng lồ đang nhìn chằm chằm bạn.",
+                onEnter: () => changeStats(-20, -40, "Độc tố ảo giác!"),
+                choices: [{ text: "Nôn mửa, bò lùi lại.", next: "hoa_vien" }]
+            },
+            "gieng_item": {
+                text: "Trâm bạc cạo lớp rêu rêu phong, làm rơi ra những viên đá màu đỏ tươi. Đó là <span class='text-[var(--gold)] font-bold'>Chu Sa</span> - vật liệu dùng để phá tà thuật.",
+                onEnter: () => giveItem("Chu Sa"),
+                choices: [{ text: "Nhặt Chu Sa.", next: "hoa_vien" }]
+            },
+            "hv_hoa": {
+                text: "Bạn ngắt đóa hoa. Nhựa cây chảy ra dính dớp như máu người.",
+                onEnter: () => giveItem("Hoa Bỉ Ngạn"),
+                choices: [{ text: "Cất vào người.", next: "hoa_vien" }]
+            },
+
+            // --- KHU VỰC: THƯ PHÒNG ---
+            "thu_phong": {
+                text: "THƯ PHÒNG bừa bộn. Trên bàn có một <span class='text-[var(--gold)]'>Chén Ngọc</span>. Góc phòng đặt chiếc Gương Đồng bị che kín bởi vải đen.",
+                onEnter: () => { const event = passTime(); if(event) return event; },
+                choices: [
+                    { text: "Lấy Chén Ngọc trên bàn.", condition: () => !hasItem("Chén Ngọc"), action: () => giveItem("Chén Ngọc"), next: "thu_phong" },
+                    { text: "Lật xem giấy tờ trên bàn.", condition: () => !hasItem("Log_Bệnh_Án"), next: "tp_giay" },
+                    { text: "Tiếp cận Gương Đồng.", next: "tp_guong" },
+                    { text: "Trở ra Hành Lang.", next: "hanh_lang" }
+                ]
+            },
+            "tp_giay": {
+                text: "Bạn đọc thấy một đoạn văn bản: <br><span class='glitch-text font-mono text-xs'>[LOG]: Bệnh nhân 404 có xu hướng phản kháng. Cần tiêm dung dịch an thần vào hệ thống mô phỏng.</span><br>Quy tắc 6 bảo nhắm mắt nếu thấy chữ lạ.",
+                choices: [
+                    { text: "Nhắm mắt xé giấy (Quy tắc 6).", action: () => changeStats(0, 10, "Bình tĩnh giả tạo"), next: "thu_phong" },
+                    { text: "Cố gắng đọc và cất đi (Phá QT 6).", onEnter: () => { giveItem("Log_Bệnh_Án"); changeStats(0, -15, "Nhức đầu!"); }, next: "thu_phong" }
+                ]
+            },
+            "tp_guong": {
+                text: "Quy tắc 4: 'Tuyệt đối không nhìn vào gương'.",
+                choices: [
+                    { text: "Lùi lại, không đụng tới.", next: "thu_phong" },
+                    { text: "Giật phăng tấm vải che!", next: "guong_action" }
+                ]
+            },
+            "guong_action": {
+                text: "Mặt gương không phản chiếu bạn, mà phản chiếu một nữ bệnh nhân đang nằm bất động với cáp quang ghim đầy đầu! Gương tỏa ra lực hút kinh hoàng, những sợi dây cáp như xúc tu vươn ra định kéo bạn vào trong phần mềm diệt virus!",
+                choices: [
+                    { text: "Dùng Trâm Bạc đâm vỡ gương!", condition: () => hasItem("Trâm Bạc"), next: "guong_safe" },
+                    { text: "Cố sức bỏ chạy!", next: "guong_trap" }
+                ]
+            },
+            "guong_trap": {
+                text: "Bạn không thể cưỡng lại lực hút... Cáp quang quấn chặt lấy cổ bạn, lôi tuột bạn vào vùng không gian số vô tận.",
+                onEnter: () => changeStats(-100, -100, "Xóa sổ dữ liệu"),
+                choices: []
+            },
+            "guong_safe": {
+                text: "<i>XOẢNG!</i> Mặt gương vỡ vụn, để lộ phía sau là một tấm thẻ từ viền vàng. Bạn nhận được <span class='text-[var(--gold)] font-bold'>Thẻ An Ninh (Keycard)</span>.",
+                onEnter: () => { giveItem("Keycard"); changeStats(0, 30, "Lý trí phục hồi"); },
+                choices: [{ text: "Nắm chặt thẻ từ.", next: "thu_phong" }]
+            },
+
+            // --- CANH NĂM (ENDGAME TRIGGER) ---
+            "event_canh_nam": {
+                text: "<span class='text-red-500 font-bold text-xl'>CANH NĂM.</span><br><br>Không gian vặn xoắn. Bức tường Lãnh Cung lột xác thành các mảng mã nhị phân. Cánh cửa chính bật mở. 'Hoàng Thượng' bước vào, cao 3 mét, khuôn mặt là một màn hình nhiễu sóng tĩnh điện.<br><br><i>'BỆNH NHÂN 404... CHUẨN BỊ RESET.'</i>",
+                choices: [
+                    { text: "Sợ hãi ôm đầu, nhắm chặt mắt chịu đựng.", next: "end_survivor" },
+                    { text: "Chuẩn bị Nghi Thức Đảo Ngược (Cần: Chu Sa, Bỉ Ngạn, Chén Ngọc)", condition: () => hasItem("Chu Sa") && hasItem("Hoa Bỉ Ngạn") && hasItem("Chén Ngọc"), next: "end_newmoon" },
+                    { text: "Đứng thẳng dậy, giơ cao Bằng Chứng (Cần: Keycard, Log_Bệnh_Án)", condition: () => hasItem("Keycard") && hasItem("Log_Bệnh_Án"), next: "end_awake" }
+                ]
+            },
+
+            // --- ENDINGS ---
+            "end_dead": { text: "", onEnter: () => showEnding("TỬ VONG", "Thân xác vật lý của bạn có lẽ vẫn sống, nhưng ý thức đã bị hệ thống nghiền nát hoàn toàn.", "#dc2626") },
+            "end_dien": { text: "", onEnter: () => showEnding("ĐIÊN LOẠN", "Chỉ số Tinh Thần cạn kiệt. Bạn tin mình là một sủng phi bị quỷ ám. Bạn sẽ kẹt mãi trong vòng lặp hoang tưởng này.", "#9333ea") },
+            
+            "end_survivor": { 
+                text: "", 
+                onEnter: () => showEnding("NGƯỜI SỐNG SÓT", "Bạn trốn rúc trong góc tối, chịu đựng cơn đau xé màng nhĩ. Khi mở mắt ra, bạn thấy mình lại đứng giữa Tẩm Cung. Một vòng lặp mới bắt đầu, bạn sống sót, nhưng không bao giờ thoát ra.", "#9ca3af") 
+            },
+            "end_newmoon": { 
+                text: "", 
+                onEnter: () => showEnding("TRĂNG NON (CHÚA TỂ)", "Bạn đốt Bỉ Ngạn và Chu Sa trong Chén Ngọc. Ngọn lửa tà thuật lây nhiễm virus vào hệ thống cốt lõi. 'Hoàng Thượng' sụp đổ. Bạn bước lên ngai vàng bằng dữ liệu, trở thành Nữ vương của vương quốc ảo này.", "#ea580c") 
+            },
+            "end_awake": { 
+                text: "", 
+                onEnter: () => showEnding("THỨC TỈNH (TRUE ENDING)", "Bạn găm Keycard vào khe ngực của 'Hoàng Thượng'. Lệnh Override kích hoạt. Thế giới cổ đại vỡ vụn. Bạn choàng tỉnh trên giường bệnh, tháo bộ VR đầy mồ hôi ra. Bạn đã tự giải cứu chính mình.", "var(--gold)") 
+            }
+        };
+
+        function showEnding(title, desc, color) {
+            document.getElementById('screen-game').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('screen-game').classList.add('hidden');
+                document.getElementById('screen-end').classList.remove('hidden');
+                
+                const titleEl = document.getElementById('end-title');
+                titleEl.innerText = title;
+                titleEl.style.color = color;
+                titleEl.style.textShadow = `0 0 20px ${color}`;
+                
+                document.getElementById('end-desc').innerHTML = desc;
+            }, 500);
+        }
+
+    </script>
+</body>
+</html>
